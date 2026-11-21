@@ -70,6 +70,26 @@ npm run dev
 | 回溯重放引擎 | `replay_engine` | 重放任务 | 历史批次范围、新解析规则版本、重放状态 |
 | 聚合查询视图 | `aggregation_view` | 聚合视图 | 视图名称、聚合维度、指标定义 |
 | 采集血缘 | `data_lineage` | 血缘关系 | 来源批次、解析规则版本、标准化版本 |
+| 分片交付清单 | `shard_delivery` | 分片交付清单 | 批次编号、片号、行号区间、当前正文版本、接入次数 |
+
+## 分片批量交付（`/shard_ingest`）
+
+采集入口支持分片日志的批量接收，领域逻辑在 `backend/app/services/shard_delivery.py`，
+HTTP 入口为 `/api/shard-ingest/*`，前端专用工作台为「分片批量交付」页。
+
+- **多选一次提交、乱序到达**：`POST /api/shard-ingest/deliver` 一次可带多个分片，
+  第三片可以先到；每个片号关联整批连续的原始行号区间与原始正文行，行区间重叠整单拒收。
+- **分片交付清单**：片号、起始/截止行号、正文摘要、接入次数、版本历史落 `shard_delivery`；
+  每次接入（首次接收/幂等复用/内容冲突）在 `shard_ingest_log` 留痕。
+- **缺口可见、授权解析**：`GET .../batch/{batch}/view` 给出待补片号、待补行区间和逐行状态网格；
+  `POST .../parse-authorized` 只解析清单当前授权版本覆盖的行，缺口行与未裁决新版本不可读，
+  解析结果（状态、成品行号 P0001…）回写 `raw_records` 待处理清单，补交后只处理新增待解析行。
+- **断线重送幂等**：同片号同正文摘要重送复用已有行引用，不重建原始行、不覆盖成品行号。
+- **同片号异文冲突**：新版本行落库但不授权，旧版行引用与成品全部保留；
+  `GET .../shards/{shard}/conflict-diff` 查两次接入的逐行差异，
+  `POST .../conflicts/resolve` 人工裁决授权版本。
+- **行号对照**：`GET .../batch/{batch}/line-map` 全量给出原始行号 ↔ 成品行号映射，
+  收齐缺口片前后均可对照。验收用例见 `backend/tests/test_shard_delivery.py`。
 
 ## 约定
 

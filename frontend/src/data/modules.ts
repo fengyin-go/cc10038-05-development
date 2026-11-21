@@ -222,6 +222,17 @@ export const MODULES: ModuleMeta[] = [
     actionTargets: {"验证血缘": "已记录", "标记断裂": "验证异常"},
     metrics: ["血缘条目数", "已验证血缘", "断裂血缘"],
   },
+  {
+    key: "shard_delivery",
+    name: "分片交付清单",
+    entity: "分片交付清单",
+    desc: "记录每个采集批次各片号的行号区间、正文版本、接入次数与冲突状态；分片批量交付在专用工作台操作",
+    fields: ["批次编号", "片号", "起始行号", "截止行号", "行计数", "接入次数", "当前版本", "当前正文摘要", "最近接入时间"],
+    statuses: ["待补齐", "已交付", "内容冲突"],
+    actions: ["保留首版", "标记缺口"],
+    actionTargets: {"保留首版": "已交付", "标记缺口": "待补齐"},
+    metrics: ["清单总数", "已交付片", "冲突片"],
+  },
 ]
 
 export const MODULE_BY_KEY: Map<string, ModuleMeta> = new Map(
